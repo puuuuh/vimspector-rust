@@ -20,4 +20,5 @@ use 'puuuuh/vimspector-rust'
 
 
 ## Commands
-:Rust
+* :RustDebugTest
+* :RustDebugBuild
