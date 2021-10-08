@@ -1,0 +1,55 @@
+local api = vim.api;
+local commands = {
+    test = "cargo test --no-run --message-format=json",
+    build = "cargo build --message-format=json"
+}
+
+local function compile(command)
+    local res = io.popen(command, "r")
+    local eof = false
+
+    local filenames = {}
+
+    while not eof do
+        local chunk = res:read()
+        if not chunk then
+            eof = true
+        else
+            local parsed = api.nvim_call_function("json_decode", { chunk })
+            --tprint(parsed, 0)
+            if parsed.reason == "compiler-message" then
+                print(parsed.message.rendered)
+            elseif parsed.reason == "compiler-artifact" then
+                if parsed.executable then
+                    filenames[#filenames+1] = parsed.executable
+                end
+            elseif parsed.reason == "build-finished" then
+                if not parsed.success then
+                    return nil
+                end
+            end
+        end
+    end
+    
+    return filenames
+end
+
+local function start_vimspector(filename)
+    vim.call("vimspector#LaunchWithSettings", { executable = filename } )
+end
+
+local function debug(kind)
+    if commands[kind] == nil then
+        error("Invalid kind. Supported: [test, build]")
+    end
+
+    local files = compile(commands[kind])
+    if #files == 0 then
+        error("Executable file not found")
+    end
+    start_vimspector(file)
+end
+
+return {
+    debug = debug
+}
